@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.gradle.tutorial.FizzBuzzProcessor")
+    mainClass.set("com.rubisco.jttpd.TcpServer")
 }
 
 group = "org.example"
