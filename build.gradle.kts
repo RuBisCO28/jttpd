@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.rubisco.jttpd.TcpServer")
+    mainClass.set("com.rubisco.jttpd.Main")
 }
 
 group = "org.example"

@@ -3,47 +3,77 @@ package com.rubisco.jttpd;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class TcpServer {
+public class ServerThread implements Runnable {
     private static final String DOCUMENT_ROOT = ".";
-    public static void main(String [] argv) throws Exception {
-        try (ServerSocket server = new ServerSocket(8001)) {
-            System.out.println("Waiting connection from client");
-            Socket socket = server.accept();
-            System.out.println("Connected");
+    private static final HashMap<String, String> contentTypeMap =
+            new HashMap<String, String>() {{
+                put("html", "text/html");
+                put("htm", "text/html");
+                put("htm", "text/html");
+                put("txt", "text/plain");
+                put("css", "text/css");
+                put("png", "image/png");
+                put("jpg", "image/jpeg");
+                put("jpeg", "image/jpeg");
+                put("gif", "image/gif");
+    }};
+    private Socket socket;
+
+    public ServerThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        OutputStream output;
+        try {
+            InputStream input = socket.getInputStream();
 
             String line = "";
-            String path = "";
-            InputStream input = socket.getInputStream();
+            String path = null;
+            String ext = null;
             while ((line = readLine(input)) != null) {
                 if (line == "")
                     break;
                 if (line.startsWith("GET")) {
                     path = line.split(" ")[1];
+                    String[] tmp = path.split("\\.");
+                    ext = tmp[tmp.length - 1];
                 }
             }
-            OutputStream output = socket.getOutputStream();
+            output = socket.getOutputStream();
+
+            // Response Header
             writeLine(output, "HTTP/1.1 200 OK");
             writeLine(output, "Date: " + getDateSringUtc());
             writeLine(output, "Server: Test/0.1");
             writeLine(output, "Connection: close");
-            writeLine(output, "Content-type: text/html");
+            writeLine(output, "Content-Type: " + getContentType(ext));
             writeLine(output, "");
 
-            try (FileInputStream fis = new FileInputStream(DOCUMENT_ROOT + path);) {
+            // Response Body
+            try (InputStream fis = new FileInputStream(DOCUMENT_ROOT + path);) {
                 int ch;
                 while ((ch = fis.read()) != -1) {
                     output.write(ch);
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    socket.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-            socket.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -81,5 +111,14 @@ public class TcpServer {
         DateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
         df.setTimeZone(cal.getTimeZone());
         return df.format(cal.getTime()) + " GMT";
+    }
+
+    private static String getContentType(String ext) {
+        String ret = contentTypeMap.get(ext.toLowerCase());
+        if (ret == null) {
+            return "application/octet-stream";
+        } else {
+            return ret;
+        }
     }
 }
