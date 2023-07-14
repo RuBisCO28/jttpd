@@ -1,30 +1,14 @@
 package com.rubisco.jttpd;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.TimeZone;
+import java.nio.file.FileSystem;
+import java.nio.file.*;
+import java.util.ResourceBundle;
 
 public class ServerThread implements Runnable {
-    private static final String DOCUMENT_ROOT = ".";
-    private static final HashMap<String, String> contentTypeMap =
-            new HashMap<String, String>() {{
-                put("html", "text/html");
-                put("htm", "text/html");
-                put("htm", "text/html");
-                put("txt", "text/plain");
-                put("css", "text/css");
-                put("png", "image/png");
-                put("jpg", "image/jpeg");
-                put("jpeg", "image/jpeg");
-                put("gif", "image/gif");
-    }};
+    private static final String RESOURCE_NAME = "application";
+    private static final String SERVER_NAME = "localhost:8001";
     private Socket socket;
 
     public ServerThread(Socket socket) {
@@ -33,92 +17,74 @@ public class ServerThread implements Runnable {
 
     @Override
     public void run() {
-        OutputStream output;
+        OutputStream output = null;
+        ResourceBundle rb = ResourceBundle.getBundle(RESOURCE_NAME);
+        final String DOCUMENT_ROOT = rb.getString("document_root");
+        final String ERROR_DOCUMENT = rb.getString("error_document_root");
         try {
             InputStream input = socket.getInputStream();
 
             String line = "";
-            String path = null;
-            String ext = null;
-            while ((line = readLine(input)) != null) {
+            String path = "";
+            String ext = "";
+            String host = "";
+            while ((line = Util.readLine(input)) != null) {
                 if (line == "")
                     break;
                 if (line.startsWith("GET")) {
-                    path = line.split(" ")[1];
+                    path = MyURLDecoder.decode(line.split(" ")[1], "UTF-8");
                     String[] tmp = path.split("\\.");
                     ext = tmp[tmp.length - 1];
+                } else if (line.startsWith("Host:")) {
+                    host = line.substring("Host: ".length());
                 }
             }
-            output = socket.getOutputStream();
+            if (path == null) {
+                return;
+            }
 
-            // Response Header
-            writeLine(output, "HTTP/1.1 200 OK");
-            writeLine(output, "Date: " + getDateSringUtc());
-            writeLine(output, "Server: Test/0.1");
-            writeLine(output, "Connection: close");
-            writeLine(output, "Content-Type: " + getContentType(ext));
-            writeLine(output, "");
+            if (path.endsWith("/")) {
+                path += "index.html";
+                ext = "html";
+            }
 
-            // Response Body
-            try (InputStream fis = new FileInputStream(DOCUMENT_ROOT + path);) {
-                int ch;
-                while ((ch = fis.read()) != -1) {
-                    output.write(ch);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    socket.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            output = new BufferedOutputStream(socket.getOutputStream());
+
+            FileSystem fs = FileSystems.getDefault();
+            Path pathObj = fs.getPath(DOCUMENT_ROOT + path);
+            Path realPath;
+
+            try {
+                realPath = pathObj.toRealPath();
+            } catch (NoSuchFileException e) {
+                SendResponse.sendNotFoundResponse(output, ERROR_DOCUMENT);
+                return;
+            }
+
+            if (!realPath.startsWith(DOCUMENT_ROOT)) {
+                SendResponse.sendNotFoundResponse(output, ERROR_DOCUMENT);
+                return;
+            } else if (Files.isDirectory(realPath)) {
+                String location = "http://" + ((host != null) ? host : SERVER_NAME) + path + "/";
+                SendResponse.sendMovePermanentlyResponse(output, location);
+                return;
+            }
+
+            try (InputStream fis = new BufferedInputStream(Files.newInputStream(realPath))) {
+                SendResponse.sendOkResponse(output, fis, ext);
+            } catch (FileNotFoundException e) {
+                SendResponse.sendNotFoundResponse(output, ERROR_DOCUMENT);
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    private static String readLine(InputStream input) throws Exception {
-        int ch;
-        String ret = "";
-        while ((ch = input.read()) != -1) {
-            if (ch == '\r') {
-
-            } else if (ch == '\n') {
-                break;
-            } else {
-                ret += (char)ch;
+        } finally {
+            try {
+                if (output != null)
+                    output.close();
+                socket.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }
-        if (ch == -1) {
-            return null;
-        } else {
-            return ret;
-        }
-    }
-
-    private static void writeLine(OutputStream output, String str) throws Exception {
-        for (char ch : str.toCharArray()) {
-            output.write((int)ch);
-        }
-        output.write((int)'\r');
-        output.write((int)'\n');
-    }
-
-    private static String getDateSringUtc() {
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        DateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
-        df.setTimeZone(cal.getTimeZone());
-        return df.format(cal.getTime()) + " GMT";
-    }
-
-    private static String getContentType(String ext) {
-        String ret = contentTypeMap.get(ext.toLowerCase());
-        if (ret == null) {
-            return "application/octet-stream";
-        } else {
-            return ret;
         }
     }
 }
