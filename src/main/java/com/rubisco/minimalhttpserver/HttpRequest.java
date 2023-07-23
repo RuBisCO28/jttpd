@@ -28,7 +28,39 @@ public class HttpRequest {
         return header.toString();
     }
 
+    private boolean isChunkedTransfer() {
+        return Stream.of(this.headerText.split(CRLF))
+                .filter(line -> line.startsWith("Transfer-Encoding"))
+                .map(line -> line.split(":")[1].trim())
+                .anyMatch("chunked"::equals);
+    }
+
     private String readBody(BufferedReader in) throws IOException {
+        if (this.isChunkedTransfer()) {
+            return this.readChunkedBody(in);
+        } else {
+            return this.readContentLengthBody(in);
+        }
+    }
+
+    private String readChunkedBody(BufferedReader in) throws IOException {
+        StringBuilder body = new StringBuilder();
+
+        int chunkSize = Integer.parseInt(in.readLine(), 16);
+
+        while (chunkSize != 0) {
+            char[] buffer = new char[chunkSize];
+            in.read(buffer);
+
+            body.append(buffer);
+
+            in.readLine();
+            chunkSize = Integer.parseInt(in.readLine(), 16);
+        }
+        return body.toString();
+    }
+
+    private String readContentLengthBody(BufferedReader in) throws IOException {
         final int contentLength = this.getContentLength();
 
         if (contentLength <= 0) {
