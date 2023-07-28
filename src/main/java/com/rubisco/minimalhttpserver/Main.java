@@ -21,6 +21,8 @@ public class Main {
 
                 if (file.exists() && file.isFile()) {
                     respondLocalFile(file, output);
+                } else {
+                    respondNotFoundError(output);
                 }
             } else {
                 respondOk(output);
@@ -43,6 +45,13 @@ public class Main {
 
     private static void respondOk(OutputStream output) throws IOException {
         HttpResponse response = new HttpResponse(Status.OK);
+        response.writeTo(output);
+    }
+
+    private static void respondNotFoundError(OutputStream output) throws IOException {
+        HttpResponse response = new HttpResponse(Status.NOT_FOUND);
+        response.addHeader("Content-Type", ContentType.TEXT_PLAIN);
+        response.setBody("404 Not Found");
         response.writeTo(output);
     }
 }

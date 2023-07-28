@@ -25,6 +25,10 @@ public class HttpResponse {
         this.headers.put(key, value.toString());
     }
 
+    public void setBody(String body) {
+        this.body = body;
+    }
+
     public void writeTo(OutputStream out) throws IOException {
         IOUtil.println(out, "HTTP/1.1 " + this.status);
 

@@ -1,7 +1,8 @@
 package com.rubisco.minimalhttpserver;
 
 public enum Status {
-    OK("200 OK");
+    OK("200 OK"),
+    NOT_FOUND("404 Not Found");
 
     private final String text;
 
