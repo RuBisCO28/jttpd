@@ -52,6 +52,7 @@ public class HttpResponse {
         String fileName = this.bodyFile.getName();
         String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
 
-        this.addHeader("Content-Type", ContentType.toContentType(extension));
+        // TODO: use ContentType
+        this.addHeader("Content-Type", "text/html");
     }
 }

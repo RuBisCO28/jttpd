@@ -1,6 +1,7 @@
 package com.rubisco.minimalhttpserver;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public enum ContentType {
     TEXT_PLAIN("text/plain", "txt"),
@@ -15,6 +16,15 @@ public enum ContentType {
     ;
 
     private static final Map<String, ContentType> EXTENSION_CONTENT_TYPE_MAP = new HashMap<>();
+
+    static {
+        Stream.of(ContentType.values())
+                .forEach(contentType -> {
+                    contentType.extensions.forEach(extension -> {
+                        EXTENSION_CONTENT_TYPE_MAP.put(extension.toUpperCase(), contentType);
+                    });
+                });
+    }
 
     private final String text;
     private final Set<String> extensions = new HashSet<>();

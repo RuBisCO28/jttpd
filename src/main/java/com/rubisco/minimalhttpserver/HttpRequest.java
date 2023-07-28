@@ -58,12 +58,4 @@ public class HttpRequest {
     public HttpHeader getHeader() {
         return this.header;
     }
-
-    public String getHeaderText() {
-        return this.header.getText();
-    }
-
-    public String getBodyText() {
-        return this.bodyText;
-    }
 }
