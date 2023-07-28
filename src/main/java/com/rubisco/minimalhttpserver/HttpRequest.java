@@ -1,88 +1,63 @@
 package com.rubisco.minimalhttpserver;
 
-import java.io.*;
-import java.util.stream.Stream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 
 public class HttpRequest {
     private static final String CRLF = "\r\n";
-    private final String headerText;
+    private final HttpHeader header;
     private final String bodyText;
 
     public HttpRequest(InputStream input) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, "UTF-8"))) {
-            this.headerText = this.readHeader(reader);
-            this.bodyText = this.readBody(reader);
+        try {
+            this.header = new HttpHeader(input);
+            this.bodyText = this.readBody(input);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private String readHeader(BufferedReader in) throws IOException {
-        String line = in.readLine();
-        StringBuilder header = new StringBuilder();
-
-        while (line != null && !line.isEmpty()) {
-            header.append(line + CRLF);
-            line = in.readLine();
-        }
-        return header.toString();
-    }
-
-    private boolean isChunkedTransfer() {
-        return Stream.of(this.headerText.split(CRLF))
-                .filter(line -> line.startsWith("Transfer-Encoding"))
-                .map(line -> line.split(":")[1].trim())
-                .anyMatch("chunked"::equals);
-    }
-
-    private String readBody(BufferedReader in) throws IOException {
-        if (this.isChunkedTransfer()) {
-            return this.readChunkedBody(in);
+    private String readBody(InputStream in) throws IOException {
+        if (this.header.isChunkedTransfer()) {
+            return this.readBodyByChunkedTransfer(in);
         } else {
-            return this.readContentLengthBody(in);
+            return this.readBodyByContentLength(in);
         }
     }
 
-    private String readChunkedBody(BufferedReader in) throws IOException {
+    private String readBodyByChunkedTransfer(InputStream in) throws IOException {
         StringBuilder body = new StringBuilder();
 
-        int chunkSize = Integer.parseInt(in.readLine(), 16);
+        int chunkSize = Integer.parseInt(IOUtil.readLine(in), 16);
 
         while (chunkSize != 0) {
-            char[] buffer = new char[chunkSize];
+            byte[] buffer = new byte[chunkSize];
             in.read(buffer);
 
-            body.append(buffer);
+            body.append(IOUtil.toString(buffer));
 
-            in.readLine();
-            chunkSize = Integer.parseInt(in.readLine(), 16);
+            IOUtil.readLine(in); // skip CRLF where located in the end of chunk-body
+            chunkSize = Integer.parseInt(IOUtil.readLine(in), 16);
         }
         return body.toString();
     }
 
-    private String readContentLengthBody(BufferedReader in) throws IOException {
-        final int contentLength = this.getContentLength();
+    private String readBodyByContentLength(InputStream in) throws IOException {
+        final int contentLength = this.header.getContentLength();
 
         if (contentLength <= 0) {
             return null;
         }
 
-        char[] buffer = new char[contentLength];
+        byte[] buffer = new byte[contentLength];
         in.read(buffer);
-        return new String(buffer);
-    }
 
-    private int getContentLength() {
-        return Stream.of(this.headerText.split(CRLF))
-                .filter(line -> line.startsWith("Content-Length"))
-                .map(line -> line.split(":")[1].trim())
-                .mapToInt(Integer::parseInt)
-                .findFirst()
-                .orElse(0);
+        return IOUtil.toString(buffer);
     }
 
     public String getHeaderText() {
-        return this.headerText;
+        return this.header.getText();
     }
 
     public String getBodyText() {

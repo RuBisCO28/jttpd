@@ -43,3 +43,4 @@ bin/
 .DS_Store
 ignore
 src/main/resources/application.properties
+.idea
