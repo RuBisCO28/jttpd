@@ -1,7 +1,6 @@
 package com.rubisco.minimalhttpserver;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -12,21 +11,38 @@ public class Main {
             Socket socket = server.accept();
             InputStream in = socket.getInputStream();
             HttpRequest request = new HttpRequest(in);
-            System.out.println(request.getHeaderText());
-            System.out.println(request.getBodyText());
+
+            HttpHeader header = request.getHeader();
 
             OutputStream output = socket.getOutputStream();
 
-            HttpResponse response = new HttpResponse(Status.OK);
-            response.addHeader("Content-Type", ContentType.TEXT_HTML);
-            response.setBody("<html><body><h1>Hello, World!</h1></body></html>");
+            if (header.isGetMethod()) {
+                File file = new File(".", header.getPath());
 
-            response.writeTo(output);
+                if (file.exists() && file.isFile()) {
+                    respondLocalFile(file, output);
+                }
+            } else {
+                respondOk(output);
+            }
 
             socket.close();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         } catch (Exception e) {
             e.printStackTrace();
         }
         System.out.println("Server is closed.");
+    }
+
+    private static void respondLocalFile(File file, OutputStream output) throws IOException {
+        HttpResponse response = new HttpResponse(Status.OK);
+        response.setBody(file);
+        response.writeTo(output);
+    }
+
+    private static void respondOk(OutputStream output) throws IOException {
+        HttpResponse response = new HttpResponse(Status.OK);
+        response.writeTo(output);
     }
 }

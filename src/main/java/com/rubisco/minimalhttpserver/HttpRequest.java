@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 
 public class HttpRequest {
-    private static final String CRLF = "\r\n";
     private final HttpHeader header;
     private final String bodyText;
 
@@ -54,6 +53,10 @@ public class HttpRequest {
         in.read(buffer);
 
         return IOUtil.toString(buffer);
+    }
+
+    public HttpHeader getHeader() {
+        return this.header;
     }
 
     public String getHeaderText() {

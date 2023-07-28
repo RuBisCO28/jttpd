@@ -64,4 +64,12 @@ public class HttpHeader {
     public String getText() {
         return this.headerText;
     }
+
+    public boolean isGetMethod() {
+        return this.method == HttpMethod.GET;
+    }
+
+    public String getPath() {
+        return this.path;
+    }
 }
