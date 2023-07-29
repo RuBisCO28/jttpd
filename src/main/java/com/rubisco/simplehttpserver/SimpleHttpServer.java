@@ -8,6 +8,8 @@ public class SimpleHttpServer {
 
     public static void main(String[] args) throws IOException {
         final var serverSocket = new ServerSocket(PORT);
+        final var requestParser = new RequestParser();
+        final var requestHandler = new RequestHandler();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -22,7 +24,9 @@ public class SimpleHttpServer {
 
         while (true) {
             try {
-                var socket = serverSocket.accept();
+                final var socket = serverSocket.accept();
+                final var worker = new WorkerThread(socket, requestParser, requestHandler);
+                worker.start();
             } catch (IOException e) {
                 System.out.println("Failed to dispatch: " + e.getMessage());
             }
