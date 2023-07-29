@@ -53,6 +53,18 @@ public class HttpResponse {
         String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
 
         // TODO: use ContentType
-        this.addHeader("Content-Type", "text/html");
+        if ("html".equals(extension) || "htm".equals(extension)) {
+            this.addHeader("Content-Type", "text/html");
+        } else if ("css".equals(extension)) {
+            this.addHeader("Content-Type", "text/css");
+        } else if ("js".equals(extension)) {
+            this.addHeader("Content-Type", "application/javascript");
+        } else if ("jpg".equals(extension) || "jpeg".equals(extension)) {
+            this.addHeader("Content-Type", "image/jpeg");
+        } else if ("png".equals(extension)) {
+            this.addHeader("Content-Type", "image/png");
+        } else {
+            this.addHeader("Content-Type", "text/plain");
+        }
     }
 }
