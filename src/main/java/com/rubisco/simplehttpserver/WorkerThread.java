@@ -20,7 +20,10 @@ public class WorkerThread  extends Thread {
         try (Socket s = socket;
              InputStream in = socket.getInputStream();
              OutputStream out = socket.getOutputStream()) {
-            System.out.println("Dispatching request...");
+            final var request = requestParser.fromInputStream(in);
+            final var response = requestHandler.handleRequest(request);
+            out.write(response.toBytes());
+            out.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
