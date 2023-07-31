@@ -28,7 +28,7 @@ public class MinimalHttpServer {
                 HttpRequest request = new HttpRequest(in);
                 HttpHeader header = request.getHeader();
                 if (header.isGetMethod()) {
-                    File file = new File(".", header.getPath());
+                    File file = new File("./html", header.getPath());
 
                     if (file.exists() && file.isFile()) {
                         this.respondLocalFile(file, output);

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 public class SimpleHttpServer {
-    private static final int PORT = 8001;
+    private static final int PORT = 8080;
 
     public static void main(String[] args) throws IOException {
         final var serverSocket = new ServerSocket(PORT);
