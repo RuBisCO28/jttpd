@@ -5,7 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-public class WorkerThread  extends Thread {
+public class WorkerThread extends Thread {
     private final Socket socket;
     private final RequestParser requestParser;
     private final RequestHandler requestHandler;
@@ -16,10 +16,11 @@ public class WorkerThread  extends Thread {
         this.requestHandler = requestHandler;
     }
 
+    @Override
     public void run() {
         try (Socket s = socket;
-             InputStream in = socket.getInputStream();
-             OutputStream out = socket.getOutputStream()) {
+             InputStream in = s.getInputStream();
+             OutputStream out = s.getOutputStream()) {
             final var request = requestParser.fromInputStream(in);
             final var response = requestHandler.handleRequest(request);
             out.write(response.toBytes());

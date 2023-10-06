@@ -16,7 +16,7 @@ public class RequestParser {
             return null;
         }
 
-        var matcher = requestLinePattern.matcher(requestLine);
+        final var matcher = requestLinePattern.matcher(requestLine);
 
         if(!matcher.matches()) {
             return null;
